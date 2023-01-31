@@ -6,7 +6,9 @@ import type { PostEntity } from '../../utils/DB/entities/DBPosts';
 const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
   fastify
 ): Promise<void> => {
-  fastify.get('/', async function (request, reply): Promise<PostEntity[]> {});
+  fastify.get('/', async function (request, reply): Promise<PostEntity[]> {
+    return fastify.db.posts.findMany();
+  });
 
   fastify.get(
     '/:id',
@@ -15,7 +17,16 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         params: idParamSchema,
       },
     },
-    async function (request, reply): Promise<PostEntity> {}
+    async function (request, reply): Promise<PostEntity> {
+      const { id } = request.params;
+      try {
+        const post = await this.db.posts.findOne({ key: 'id', equals: id });
+        if (!post) throw this.httpErrors.notFound(`The post with id ${id} not found.`);
+        return post;
+      } catch (error) {
+        return reply.send(error);
+      }
+    }
   );
 
   fastify.post(
@@ -25,7 +36,15 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         body: createPostBodySchema,
       },
     },
-    async function (request, reply): Promise<PostEntity> {}
+    async function (request, reply): Promise<PostEntity> {
+      try {
+        const newPost = this.db.posts.create(request.body);
+        if (!(await newPost)) throw this.httpErrors.preconditionFailed('Failed to create post.');
+        return newPost;
+      } catch (error) {
+        return reply.send(error);
+      }
+    }
   );
 
   fastify.delete(
@@ -35,7 +54,19 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         params: idParamSchema,
       },
     },
-    async function (request, reply): Promise<PostEntity> {}
+    async function (request, reply): Promise<PostEntity> {
+      const { id } = request.params;
+      try {
+        const post = await this.db.posts.findOne({ key: 'id', equals: id });
+        if (!post) throw this.httpErrors.badRequest(`The post with id ${id} not found.`);
+
+        const deletedPost = this.db.posts.delete(id);
+        if (!(await deletedPost)) throw this.httpErrors.preconditionFailed('Posts delete error.');
+        return deletedPost;
+      } catch (error) {
+        return reply.send(error);
+      }
+    }
   );
 
   fastify.patch(
@@ -46,7 +77,21 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         params: idParamSchema,
       },
     },
-    async function (request, reply): Promise<PostEntity> {}
+    async function (request, reply): Promise<PostEntity> {
+      const { id } = request.params;
+      const newFields = request.body;
+      try {
+        const post = await this.db.posts.findOne({ key: 'id', equals: id });
+        if (!post) throw this.httpErrors.badRequest(`The post with id ${id} not found.`);
+
+        const updatedPost = this.db.posts.change(id, newFields);
+        if (!(await updatedPost)) throw this.httpErrors.preconditionFailed('Update post error.');
+
+        return updatedPost;
+      } catch (error) {
+        return reply.send(error);
+      }
+    }
   );
 };
 
