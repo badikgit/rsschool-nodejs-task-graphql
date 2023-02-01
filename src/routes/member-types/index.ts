@@ -23,7 +23,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const { id } = request.params;
       try {
         const memberType = await this.db.memberTypes.findOne({ key: 'id', equals: id });
-        if (!memberType) throw this.httpErrors.notFound(`The member type with id ${id} not found.`);
+        if (!memberType) throw this.httpErrors.notFound(`Get member type error: The member type with id ${id} not found.`);
 
         return memberType;
       } catch (error) {
@@ -45,7 +45,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const newFields = request.body;
       try {
         const memberType = await this.db.memberTypes.findOne({ key: 'id', equals: id });
-        if (!memberType) throw this.httpErrors.badRequest(`The member type with id ${id} not found.`);
+        if (!memberType) throw this.httpErrors.badRequest(`Update member type error: The member type with id ${id} not found.`);
 
         const updatedMemberType = this.db.memberTypes.change(id, newFields);
         if (!(await updatedMemberType)) throw this.httpErrors.preconditionFailed('Update member type error.');

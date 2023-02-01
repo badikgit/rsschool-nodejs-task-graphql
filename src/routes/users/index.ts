@@ -25,7 +25,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const { id } = request.params;
       try {
         const user = await this.db.users.findOne({ key: 'id', equals: id });
-        if (!user) throw this.httpErrors.notFound(`The user with id ${id} not found.`);
+        if (!user) throw this.httpErrors.notFound(`Failed to get user: The user with id ${id} not found.`);
 
         return user;
       } catch (error) {
@@ -64,12 +64,12 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const { id } = request.params;
       try {
         const user = await this.db.users.findOne({ key: 'id', equals: id });
-        if (!user) throw this.httpErrors.badRequest(`The user with id ${id} not found.`);
+        if (!user) throw this.httpErrors.badRequest(`User delete error: The user with id ${id} not found.`);
 
         const profile = await this.db.profiles.findOne({ key: 'userId', equals: id });
         if (profile) {
           const deletedProfile = await this.db.profiles.delete(profile.id);
-          if (!deletedProfile) throw this.httpErrors.preconditionFailed('Profile delete error.');
+          if (!deletedProfile) throw this.httpErrors.preconditionFailed('User delete error: Profile delete error.');
         }
 
         const posts = await this.db.posts.findMany({ key: 'userId', equals: id });
@@ -77,7 +77,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
           const deletedPosts = await Promise.all(
             posts.map((post) => this.db.posts.delete(post.id))
           );
-          if (!deletedPosts.every((post) => post)) throw this.httpErrors.preconditionFailed('Posts delete error.');
+          if (!deletedPosts.every((post) => post)) throw this.httpErrors.preconditionFailed('User delete error: Posts delete error.');
         }
 
         const followers = await this.db.users.findMany({ key: 'subscribedToUserIds', equals: [id] });
@@ -87,7 +87,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
               this.db.users.change(follower.id, { subscribedToUserIds: [...follower.subscribedToUserIds].filter((fId) => fId !== id) })
             )
           );
-          if (!(deletedFollowers.every((follower) => follower))) throw this.httpErrors.preconditionFailed('Followers delete error.');
+          if (!(deletedFollowers.every((follower) => follower))) throw this.httpErrors.preconditionFailed('User delete error: Followers delete error.');
         }
 
         const deletedUser = this.db.users.delete(id);
@@ -112,15 +112,17 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const { id } = request.params;
       const { userId } = request.body;
       try {
+        if (id === userId) throw this.httpErrors.badRequest(`Subscribe error: The user can't be subscribed to itself.`);
+
         const user = await this.db.users.findOne({ key: 'id', equals: id });
-        if (!user) throw this.httpErrors.badRequest(`The user with id ${id} not found.`);
+        if (!user) throw this.httpErrors.badRequest(`Subscribe error: The user with id ${id} not found.`);
 
         const candidate = await this.db.users.findOne({ key: 'id', equals: userId });
-        if (!candidate) throw this.httpErrors.badRequest(`The user with id ${id} not found.`);
+        if (!candidate) throw this.httpErrors.badRequest(`Subscribe error: The user with id ${id} not found.`);
 
         const { subscribedToUserIds } = candidate;
         const isFollower = subscribedToUserIds.includes(id);
-        if (isFollower) throw this.httpErrors.badRequest(`The user with id ${userId} is already subscribed to the user with id ${id}.`);
+        if (isFollower) throw this.httpErrors.badRequest(`Subscribe error: The user with id ${userId} is already subscribed to the user with id ${id}.`);
 
         subscribedToUserIds.push(id);
         const updatedUser = this.db.users.change(userId, candidate);
@@ -146,14 +148,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const { userId } = request.body;
       try {
         const user = await this.db.users.findOne({ key: 'id', equals: id });
-        if (!user) throw this.httpErrors.badRequest(`The user with id ${id} not found.`);
+        if (!user) throw this.httpErrors.badRequest(`Unsubscribe error: The user with id ${id} not found.`);
 
         const candidate = await this.db.users.findOne({ key: 'id', equals: userId });
-        if (!candidate) throw this.httpErrors.badRequest(`The user with id ${userId} not found.`);
+        if (!candidate) throw this.httpErrors.badRequest(`Unsubscribe error: The user with id ${userId} not found.`);
 
         const { subscribedToUserIds } = candidate;
         const isFollower = subscribedToUserIds.includes(id);
-        if (!isFollower) throw this.httpErrors.badRequest(`The user with id ${userId} is already unsubscribed from the user with id ${id}.`);
+        if (!isFollower) throw this.httpErrors.badRequest(`Unsubscribe error: The user with id ${userId} is already unsubscribed from the user with id ${id}.`);
 
         const deletedIndex = subscribedToUserIds.indexOf(id);
         subscribedToUserIds.splice(deletedIndex, deletedIndex < 0 ? 0 : 1);
@@ -180,7 +182,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const newFields = request.body;
       try {
         const user = await this.db.users.findOne({ key: 'id', equals: id });
-        if (!user) throw this.httpErrors.badRequest(`The user with id ${id} not found.`);
+        if (!user) throw this.httpErrors.badRequest(`Update user error. The user with id ${id} not found.`);
 
         const updatedUser = this.db.users.change(id, newFields);
         if (!(await updatedUser)) throw this.httpErrors.preconditionFailed('Update user error.');

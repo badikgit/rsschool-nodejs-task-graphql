@@ -40,14 +40,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const { userId } = request.body;
       try {
         const user = await this.db.users.findOne({ key: 'id', equals: userId });
-        if (!user) throw this.httpErrors.badRequest(`The user with id ${userId} not found.`);
+        if (!user) throw this.httpErrors.badRequest(`Failed to create profile: The user with id ${userId} not found.`);
 
         const { memberTypeId } = request.body;
         const memberType = await this.db.memberTypes.findOne({ key: 'id', equals: memberTypeId });
-        if (!memberType) throw fastify.httpErrors.badRequest(`The member type with id ${memberTypeId} not found.`);
+        if (!memberType) throw fastify.httpErrors.badRequest(`Failed to create profile: The member type with id ${memberTypeId} not found.`);
 
         const profile = await this.db.profiles.findOne({ key: 'userId', equals: userId });
-        if (profile) throw fastify.httpErrors.badRequest(`The user with id ${userId} already has a profile.`);
+        if (profile) throw fastify.httpErrors.badRequest(`Failed to create profile: The user with id ${userId} already has a profile.`);
 
         const newProfile = this.db.profiles.create(request.body);
         if (!(await newProfile)) throw this.httpErrors.preconditionFailed('Failed to create profile.');
@@ -70,7 +70,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const { id } = request.params;
       try {
         const profile = await this.db.profiles.findOne({ key: 'id', equals: id });
-        if (!profile) throw this.httpErrors.badRequest(`The profile with id ${id} not found.`);
+        if (!profile) throw this.httpErrors.badRequest(`Profile delete error: The profile with id ${id} not found.`);
 
         const deletedProfile = this.db.profiles.delete(id);
         if (!(await deletedProfile)) throw this.httpErrors.preconditionFailed('Profile delete error.');
@@ -95,7 +95,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const newFields = request.body;
       try {
         const profile = await this.db.profiles.findOne({ key: 'id', equals: id });
-        if (!profile) throw this.httpErrors.badRequest(`The profile with id ${id} not found.`);
+        if (!profile) throw this.httpErrors.badRequest(`Update profile error: The profile with id ${id} not found.`);
 
         const updatedProfile = this.db.profiles.change(id, newFields);
         if (!(await updatedProfile)) throw this.httpErrors.preconditionFailed('Update profile error.');
